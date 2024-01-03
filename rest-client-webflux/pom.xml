@@ -1,0 +1,32 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.camunda.consulting</groupId>
+  <artifactId>rest-client-webflux</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Rest Client with WebFlux</name>
+  <description>Asynchronous Rest Client sending parallel request</description>
+
+
+  <properties>
+    <java.version>17</java.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+      <version>3.1.5</version>
+    </dependency>
+
+<!--    <dependency>-->
+<!--      <groupId>io.netty</groupId>-->
+<!--      <artifactId>netty-resolver-dns-native-macos</artifactId>-->
+<!--      <version>4.1.104.Final</version>-->
+<!--      <classifier>osx-aarch_64</classifier>-->
+<!--    </dependency>-->
+  </dependencies>
+</project>
