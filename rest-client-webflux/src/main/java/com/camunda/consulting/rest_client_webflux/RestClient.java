@@ -22,13 +22,30 @@ public class RestClient {
 
   Boolean waitInLoggerFor5sec = true;
 
+  @PostConstruct
+  public void sendRequests() {
+    sendRequestsSequentially();
+
+    sendRequestsParallel();
+  }
+
+  public void sendRequestsSequentially() {
+    LOG.info("start sending messages in a row");
+
+    for (int i = 0; i < 5; i++) {
+      String response = publishMessage(i, waitInLoggerFor5sec).block();
+      LOG.info("response: {}", response);
+    }
+
+    LOG.info("Messages send in a row");
+  }
+
   /**
    * Taken from "Simultaneous Spring WebClient Calls"
    * <p>
    * <a href="https://www.baeldung.com/spring-webclient-simultaneous-calls">
    * https://www.baeldung.com/spring-webclient-simultaneous-calls</a>
    */
-  @PostConstruct
   public void sendRequestsParallel() {
     LOG.info("start sending requests in parallel");
 
@@ -39,18 +56,6 @@ public class RestClient {
     responses.stream().forEach(response -> LOG.info("result: {}", response));
 
     LOG.info("All messages send");
-  }
-
-  @PostConstruct
-  public void sendRequestsSequentially() {
-    LOG.info("start sending messages in a row");
-
-    for (int i = 0; i < 5; i++) {
-      String response = publishMessage(i, waitInLoggerFor5sec).block();
-      LOG.info("response: {}", response);
-    }
-
-    LOG.info("Messages send in a row");
   }
 
   Mono<String> publishMessage(Integer value, Boolean wait) {
