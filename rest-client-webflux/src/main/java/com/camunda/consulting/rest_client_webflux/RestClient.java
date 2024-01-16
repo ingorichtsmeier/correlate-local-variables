@@ -24,7 +24,7 @@ public class RestClient {
 
   @PostConstruct
   public void sendRequests() {
-    sendRequestsSequentially();
+//    sendRequestsSequentially();
 
     sendRequestsParallel();
   }
@@ -49,7 +49,7 @@ public class RestClient {
   public void sendRequestsParallel() {
     LOG.info("start sending requests in parallel");
 
-    Flux<String> flux = sendMessagesParallel(List.of(15, 16, 17), waitInLoggerFor5sec);
+    Flux<String> flux = sendMessagesParallel(List.of(15, 16, 17, 18, 19), waitInLoggerFor5sec);
 
     List<String> responses = flux.collectList().block();
 
@@ -78,12 +78,31 @@ public class RestClient {
           }
         }
         """.formatted(value, wait));
+        /*
+    request.bodyValue("""
+        {
+          \"messageName\":\"testMessage\",
+          \"resultEnabled\":true,
+          \"processVariables\": {
+            \"var1\": {
+              \"value\": %d
+            },
+            \"wait\": {
+              \"value\": %b
+            }
+          }
+        }
+        """.formatted(value, wait));
+         */
     Mono<String> response1 = request.exchangeToMono(response -> {
       if (response.statusCode().equals(HttpStatus.OK)) {
+        LOG.info("Payload: {}", value);
         return response.bodyToMono(String.class);
       } else if (response.statusCode().is4xxClientError()) {
+        LOG.info("Error Payload: {}", value);
         return Mono.just("Error Response");
       } else if (response.statusCode().is5xxServerError()) {
+        LOG.info("Exception Payload: {}", value);
         return response.bodyToMono(String.class);
       } else {
         return response.createException().flatMap(Mono::error);
