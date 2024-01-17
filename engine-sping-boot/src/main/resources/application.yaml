@@ -17,3 +17,9 @@ camunda.bpm:
     create: All Tasks
 #  default-serialization-format: application/json
 server.port: 8080
+
+logging:
+  level:
+    org.camunda.bpm.engine.impl.persistence.entity: TRACE
+    org.camunda.bpm.engine.cmd: DEBUG
+    

@@ -9,6 +9,10 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.RequestBodySpec;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -21,12 +25,24 @@ public class RestClient {
   WebClient client = WebClient.create("http://localhost:8080");
 
   Boolean waitInLoggerFor5sec = true;
+  
+  ObjectMapper objectMapper = new ObjectMapper();
 
   @PostConstruct
   public void sendRequests() {
 //    sendRequestsSequentially();
 
     sendRequestsParallel();
+    
+    try {
+      Task task = getTaskExecutionId();
+      LOG.info("Task execution response: {}", task.getExecutionId());
+      LOG.info("Variable value in task: {}", getVariableVar1(task.getExecutionId()).getValue());
+      completeTask(task.getId());
+    } catch (JsonProcessingException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 
   public void sendRequestsSequentially() {
@@ -49,7 +65,7 @@ public class RestClient {
   public void sendRequestsParallel() {
     LOG.info("start sending requests in parallel");
 
-    Flux<String> flux = sendMessagesParallel(List.of(15, 16, 17, 18, 19), waitInLoggerFor5sec);
+    Flux<String> flux = sendMessagesParallel(List.of(15, 16, 17), waitInLoggerFor5sec);
 
     List<String> responses = flux.collectList().block();
 
@@ -114,4 +130,56 @@ public class RestClient {
   Flux<String> sendMessagesParallel(List<Integer> messageValues, Boolean wait) {
     return Flux.fromIterable(messageValues).flatMap(value -> this.publishMessage(value, wait));
   }
+  
+  Task getTaskExecutionId() throws JsonMappingException, JsonProcessingException {
+    LOG.info("Query for taskId");
+    RequestBodySpec requestBodySpec =
+        client.post().uri(URI.create("http://localhost:8080/engine-rest/task"));
+    requestBodySpec.contentType(MediaType.APPLICATION_JSON);
+    requestBodySpec.bodyValue("""
+        {
+            "name": "Confirm value"
+        }
+        """);
+    Mono<String> response1 = requestBodySpec.exchangeToMono(response -> {
+      return response.bodyToMono(String.class);
+    });
+    String jsonResponse = response1.block();
+    List<Task> taskList = objectMapper.readValue(jsonResponse, new TypeReference<List<Task>>() {});
+    return taskList.get(0);
+  }
+
+  Variable getVariableVar1(String executionId)
+      throws JsonMappingException, JsonProcessingException {
+    LOG.info("Query for variable 'var1' from execution {}", executionId);
+    RequestBodySpec request =
+        client.post().uri(URI.create("http://localhost:8080/engine-rest/variable-instance"));
+    request.contentType(MediaType.APPLICATION_JSON);
+    request.bodyValue("""
+        {
+          "variableName": "var1",
+          "executionIdIn": ["%s"]
+        }
+        """.formatted(executionId));
+    Mono<String> response1 = request.exchangeToMono(response -> {
+      return response.bodyToMono(String.class);
+    });
+    String jsonResponse = response1.block();
+    List<Variable> variables =
+        objectMapper.readValue(jsonResponse, new TypeReference<List<Variable>>() {});
+    return variables.get(0);
+  }
+
+  void completeTask(String taskId) {
+    LOG.info("Complete task");
+    RequestBodySpec requestBodySpec = client.post()
+        .uri(URI.create("http://localhost:8080/engine-rest/task/" + taskId + "/complete"));
+    requestBodySpec.contentType(MediaType.APPLICATION_JSON);
+    requestBodySpec.bodyValue("{}");
+    Mono<String> response1 = requestBodySpec.exchangeToMono(response -> {
+      return response.bodyToMono(String.class);
+    });
+    response1.block();
+  }
+  
 }
