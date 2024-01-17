@@ -65,13 +65,17 @@ public class RestClient {
   public void sendRequestsParallel() {
     LOG.info("start sending requests in parallel");
 
-    Flux<String> flux = sendMessagesParallel(List.of(15, 16, 17), waitInLoggerFor5sec);
+    Flux<String> flux = sendMessagesParallel(List.of(15, 16, 17, 18, 19, 20), waitInLoggerFor5sec);
 
     List<String> responses = flux.collectList().block();
 
     responses.stream().forEach(response -> LOG.info("result: {}", response));
 
     LOG.info("All messages send");
+  }
+
+  Flux<String> sendMessagesParallel(List<Integer> messageValues, Boolean wait) {
+    return Flux.fromIterable(messageValues).flatMap(value -> this.publishMessage(value, wait));
   }
 
   Mono<String> publishMessage(Integer value, Boolean wait) {
@@ -127,10 +131,6 @@ public class RestClient {
     return response1;
   }
 
-  Flux<String> sendMessagesParallel(List<Integer> messageValues, Boolean wait) {
-    return Flux.fromIterable(messageValues).flatMap(value -> this.publishMessage(value, wait));
-  }
-  
   Task getTaskExecutionId() throws JsonMappingException, JsonProcessingException {
     LOG.info("Query for taskId");
     RequestBodySpec requestBodySpec =
