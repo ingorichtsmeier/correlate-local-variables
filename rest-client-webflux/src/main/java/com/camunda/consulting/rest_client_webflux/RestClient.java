@@ -2,6 +2,7 @@ package com.camunda.consulting.rest_client_webflux;
 
 import java.net.URI;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -32,13 +33,15 @@ public class RestClient {
   public void sendRequests() {
 //    sendRequestsSequentially();
 
-    sendRequestsParallel();
+    String correlatedValue = sendRequestsParallel();
     
     try {
       Task task = getTaskExecutionId();
       LOG.info("Task execution response: {}", task.getExecutionId());
-      LOG.info("Variable value in task: {}", getVariableVar1(task.getExecutionId()).getValue());
+      String valueInDatabase = getVariableVar1(task.getExecutionId()).getValue();
+      LOG.info("Variable value in task: {}", valueInDatabase);
       completeTask(task.getId());
+      assert(correlatedValue.equals(valueInDatabase));
     } catch (JsonProcessingException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -62,16 +65,20 @@ public class RestClient {
    * <a href="https://www.baeldung.com/spring-webclient-simultaneous-calls">
    * https://www.baeldung.com/spring-webclient-simultaneous-calls</a>
    */
-  public void sendRequestsParallel() {
+  public String sendRequestsParallel() {
     LOG.info("start sending requests in parallel");
 
     Flux<String> flux = sendMessagesParallel(List.of(15, 16, 17, 18, 19, 20), waitInLoggerFor5sec);
 
     List<String> responses = flux.collectList().block();
 
-    responses.stream().forEach(response -> LOG.info("result: {}", response));
+//    responses.stream().forEach(response -> LOG.info("result: {}", response));
+    List<String> results = responses.stream().filter(value -> value.startsWith("Ex") == false).collect(Collectors.toList());
+    assert(results.size() == 1);
+    LOG.info("correlated variable value: {}", results.get(0));
 
     LOG.info("All messages send");
+    return results.get(0);
   }
 
   Flux<String> sendMessagesParallel(List<Integer> messageValues, Boolean wait) {
@@ -117,13 +124,15 @@ public class RestClient {
     Mono<String> response1 = request.exchangeToMono(response -> {
       if (response.statusCode().equals(HttpStatus.OK)) {
         LOG.info("Payload: {}", value);
-        return response.bodyToMono(String.class);
+        return Mono.just(""+ value);
+//        return response.bodyToMono(String.class);
       } else if (response.statusCode().is4xxClientError()) {
         LOG.info("Error Payload: {}", value);
         return Mono.just("Error Response");
       } else if (response.statusCode().is5xxServerError()) {
         LOG.info("Exception Payload: {}", value);
-        return response.bodyToMono(String.class);
+        return Mono.just("Ex: " + value);
+//        return response.bodyToMono(String.class);
       } else {
         return response.createException().flatMap(Mono::error);
       }
