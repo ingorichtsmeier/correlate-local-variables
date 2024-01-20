@@ -37,11 +37,11 @@ public class RestClient {
     
     try {
       Task task = getTaskExecutionId();
-      LOG.info("Task execution response: {}", task.getExecutionId());
-      String valueInDatabase = getVariableVar1(task.getExecutionId()).getValue();
+      LOG.info("Task execution response: {}", task.executionId());
+      String valueInDatabase = getVariableVar1(task.executionId()).value();
       LOG.info("Variable value in task: {}", valueInDatabase);
-      completeTask(task.getId());
-      assert(correlatedValue.equals(valueInDatabase));
+      completeTask(task.id());
+      assert correlatedValue.equals(valueInDatabase) : "database doesn't contain the correlated payload";
     } catch (JsonProcessingException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -68,13 +68,13 @@ public class RestClient {
   public String sendRequestsParallel() {
     LOG.info("start sending requests in parallel");
 
-    Flux<String> flux = sendMessagesParallel(List.of(15, 16, 17, 18, 19, 20), waitInLoggerFor5sec);
+    Flux<String> flux = sendMessagesParallel(List.of(15, 16, 17), waitInLoggerFor5sec);
 
     List<String> responses = flux.collectList().block();
 
 //    responses.stream().forEach(response -> LOG.info("result: {}", response));
     List<String> results = responses.stream().filter(value -> value.startsWith("Ex") == false).collect(Collectors.toList());
-    assert(results.size() == 1);
+    assert results.size() == 1 : "found more than one user task after message correlation";
     LOG.info("correlated variable value: {}", results.get(0));
 
     LOG.info("All messages send");
